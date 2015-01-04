@@ -123,7 +123,7 @@
 
 /* Chunk size == 128 is troublesome on Z1, maybe related to 6LoWPAN fragmentation */
 /* Not sure why, set it to 64 */
-#define REST_MAX_CHUNK_SIZE     64
+#define REST_MAX_CHUNK_SIZE     256
 
 /*---------------------------------------------------------------------------*/
 /* UDP-CLIENT                                                                */
@@ -164,7 +164,7 @@
 #define QUEUEBUF_CONF_NUM          5
 
 #undef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE    260
+#define UIP_CONF_BUFFER_SIZE    512
 
 #undef UIP_CONF_RECEIVE_WINDOW
 #define UIP_CONF_RECEIVE_WINDOW  60
