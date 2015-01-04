@@ -55,6 +55,8 @@
 #include "node-info.h"
 #include "log-6lbr.h"
 
+#include "time.h"
+
 #if CONTIKI_TARGET_ECONOTAG
 #include "mc1322x.h"
 #include "contiki-maca.h"
@@ -93,7 +95,7 @@ extern uint32_t slip_message_sent;
 extern uint32_t slip_message_received;
 
 static int redirect;
-
+#define IP_LIST_PATH "/root/viper/ip_list"
 /*---------------------------------------------------------------------------*/
 /* Use simple webserver with only one page for minimum footprint.
  * Multiple connections can result in interleaved tcp segments since
@@ -181,21 +183,33 @@ ipaddr_add(const uip_ipaddr_t * addr)
 {
   uint16_t a;
   int i, f;
-
+  //Opening the file
+  FILE *fp;
+  fp = fopen(IP_LIST_PATH,"a");
+  if (fp == NULL)
+     { printf("Could not open file\n");
+       exit(1);
+     }
   for(i = 0, f = 0; i < sizeof(uip_ipaddr_t); i += 2) {
     a = (addr->u8[i] << 8) + addr->u8[i + 1];
     if(a == 0 && f >= 0) {
       if(f++ == 0)
-        add("::");
+        {add("::");
+         fprintf(fp,"::");
+        }
     } else {
       if(f > 0) {
         f = -1;
       } else if(i > 0) {
         add(":");
+        fprintf(fp,":");
       }
       add("%x", a);
+      fprintf(fp,"%x",a);
     }
   }
+  fprintf(fp,",");
+  fclose(fp);
 }
 
 static void
@@ -517,7 +531,19 @@ PT_THREAD(generate_sensors(struct httpd_state *s))
 #endif
 
   PSOCK_BEGIN(&s->sout);
+  //Getting timestamp
+    time_t currTime;
+    currTime = time(NULL);
 
+  //Opening file and put timestamp
+  FILE *fp;
+  fp = fopen(IP_LIST_PATH,"a");
+  if (fp == NULL)
+     { printf("Could not open file\n");
+       exit(1);
+     }
+  fprintf(fp,"%ld ",currTime);
+  fclose(fp);
   SEND_STRING(&s->sout, TOP);
   SEND_STRING(&s->sout, BODY);
   reset_buf();
@@ -598,10 +624,10 @@ PT_THREAD(generate_sensors(struct httpd_state *s))
       SEND_STRING(&s->sout, buf);
       reset_buf();
       add("<td><a href=http://[");
-      ipaddr_add(&node_info_table[i].ipaddr);
+      //ipaddr_add(&node_info_table[i].ipaddr);
       add("]/>web</a></td>");
       add("<td><a href=coap://[");
-      ipaddr_add(&node_info_table[i].ipaddr);
+     // ipaddr_add(&node_info_table[i].ipaddr);
       add("]:5683/>coap</a></td>");
       if(node_info_table[i].messages_count > 0) {
         add("<td>%d</td><td>", node_info_table[i].sequence);
@@ -706,7 +732,13 @@ PT_THREAD(generate_sensors(struct httpd_state *s))
   add("</div></div>");
   SEND_STRING(&s->sout, buf);
   SEND_STRING(&s->sout, BOTTOM);
-
+  fp = fopen(IP_LIST_PATH,"a");
+  if (fp==NULL)
+     {printf("Could not open\n");
+      exit(1);
+     }
+  fprintf(fp,"\n");
+  fclose(fp);
   PSOCK_END(&s->sout);
 }
 /*---------------------------------------------------------------------------*/
